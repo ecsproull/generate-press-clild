@@ -1,0 +1,13 @@
+# Ignore WordPress core files
+!style.css
+!functions.php
+
+# Ignore Node / build artifacts if you use them
+node_modules/
+dist/
+
+# Ignore editor autosaves or temporary files
+*.swp
+*.swo
+*.DS_Store
+
