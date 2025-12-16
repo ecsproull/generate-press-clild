@@ -2,4 +2,47 @@
  * DO NOT EDIT IN ADMIN
  * Changes must be made here by developer
  */
+#masthead {
+	background-image: url("../images/maple.jpg");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+}
 
+body {
+	background-image: url("../images/walnut.jpg");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+}
+
+.main-navigation,
+.widget,
+.inside-article {
+    background: rgba(255, 255, 255, 0.85); /* translucent */
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+aside {
+    background: rgba(192, 192, 192, 0.85); /* translucent */
+
+}
+
+.main-title {
+    font-size: 2.5rem;
+
+}
+
+@media (max-width: 768px) {
+    .main-navigation,
+    .widget,
+    .inside-article {
+        padding: 0;
+    }
+
+    .main-title {
+        font-size: 1.6rem;
+
+    }
+}
