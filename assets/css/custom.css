@@ -11,9 +11,12 @@
 
 body {
 	background-image: url("../images/walnut.jpg");
-    background-repeat: no-repeat;
+    /** background-repeat: no-repeat;
     background-position: center center;
-    background-size: cover;
+    background-size: cover; **/
+    background-repeat: repeat-y;  
+    background-position: center top; /* or left top */
+    background-size: auto; 
 }
 
 .main-navigation,
@@ -99,6 +102,19 @@ aside {
     padding: 0;
     border: none;
 } 
+
+.widget {
+    padding: 10px 40px 30px 40px !important;
+}
+
+.calendar-header,
+.week-grid {
+    border-color: "#f8f9fa" !important;
+}
+
+.calendar-header {
+    border-radius: 8px !important;
+}
 
 @media (max-width: 768px) {
     .main-navigation,
