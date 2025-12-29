@@ -2,21 +2,38 @@
  * DO NOT EDIT IN ADMIN
  * Changes must be made here by developer
  */
-#masthead {
+
+#page {
+    padding: 20px !important;
+}
+
+ .site-footer {
+  display: none;
+}
+
+body,
+.inside-header {
 	background-image: url("../images/maple.jpg");
-    background-repeat: no-repeat;
+    background-repeat: repeat-y;
     background-position: center center;
     background-size: cover;
 }
 
-body {
+.site-header {
+    background-color: none !important;
+    background-image: url("../images/walnut.jpg") !important;
+}
+
+
+#page {
 	background-image: url("../images/walnut.jpg");
-    /** background-repeat: no-repeat;
-    background-position: center center;
-    background-size: cover; **/
     background-repeat: repeat-y;  
     background-position: center top; /* or left top */
-    background-size: auto; 
+    background-size: auto;
+}
+
+.grid-container {
+    max-width: 1800px !important;
 }
 
 .main-navigation,
@@ -30,7 +47,7 @@ body {
 .main-nav ul li a {
     padding-left: 10px !important;
     font-weight: 500;
-    font-size: 1.2rem;
+    font-size: 1.6rem;
     line-height: 40px;
 }
 
@@ -116,6 +133,7 @@ aside {
     border-radius: 8px !important;
 }
 
+
 @media (max-width: 768px) {
     .main-navigation,
     .widget,
@@ -125,6 +143,5 @@ aside {
 
     .main-title {
         font-size: 1.6rem;
-
     }
 }
