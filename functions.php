@@ -139,4 +139,82 @@ function esp_bsk_pdfm_category_ul_redirect( $output, $tag, $attr ) {
     return $output;
 }
 
+function scw_render_menu_subtree_shortcode( $atts ) {
+    $atts = shortcode_atts( [
+        'menu'      => '',   // menu slug or name
+        'parent_id' => 0,    // menu item ID
+        'depth'     => 0,    // 0 = unlimited
+    ], $atts );
+
+    if ( empty( $atts['menu'] ) || empty( $atts['parent_id'] ) ) {
+        return '';
+    }
+
+    $menu = wp_get_nav_menu_object( $atts['menu'] );
+    if ( ! $menu ) {
+        return '';
+    }
+
+    $items = wp_get_nav_menu_items( $menu->term_id );
+    if ( ! $items ) {
+        return '';
+    }
+
+    // Index items by parent
+    $children = [];
+    foreach ( $items as $item ) {
+        $children[ $item->menu_item_parent ][] = $item;
+    }
+
+    // Recursive walker
+    $render_items = function( $parent_id, $level = 0 ) use ( &$render_items, $children, $atts ) {
+        if ( ! isset( $children[ $parent_id ] ) ) {
+            return '';
+        }
+
+        if ( $atts['depth'] > 0 && $level >= $atts['depth'] ) {
+            return '';
+        }
+
+        $html = '<ul class="submenu-section">';
+        foreach ( $children[ $parent_id ] as $item ) {
+            $html .= '<li class="menu-item menu-item-' . esc_attr( $item->ID ) . '">';
+            $html .= '<a href="' . esc_url( $item->url ) . '">' . esc_html( $item->title ) . '</a>';
+            $html .= $render_items( $item->ID, $level + 1 );
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+
+        return $html;
+    };
+
+    return $render_items( (int) $atts['parent_id'] );
+}
+add_shortcode( 'menu_subtree', 'scw_render_menu_subtree_shortcode' );
+
+add_filter( 'comments_open', function ( $open, $post_id ) {
+
+    // Change this to your parent page ID
+    $parent_page_id = 4579;
+
+    $post = get_post( $post_id );
+    if ( ! $post ) {
+        return $open;
+    }
+
+    // Only apply to pages
+    if ( $post->post_type !== 'page' ) {
+        return $open;
+    }
+
+    // If this page is a child of the parent
+    if ( (int) $post->post_parent === $parent_page_id ) {
+        return true;
+    }
+
+    return $open;
+
+}, 10, 2 );
+
+
 
