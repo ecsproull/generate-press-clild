@@ -213,8 +213,49 @@ add_filter( 'comments_open', function ( $open, $post_id ) {
     }
 
     return $open;
-
+ 
 }, 10, 2 );
 
+add_action('wp_login', function($user_login, $user) {
+    global $wpdb;
+    $user_roles = "";
+    foreach ( $user->roles as $role ) {
+        $user_roles .= $role . ", ";
+    }
+	
+    $log_data['logs_text']          = $user_login . ' Roles : ' . $user_roles;
+	$log_data['logs_function_name'] = "wp_login";
+	$log_data['logs_file_name']     = "functions.php";
+	$log_data['logs_ip_address']    = $_SERVER['HTTP_X_REAL_IP'] ?? '';
+	$now                            = new DateTime( 'now', new DateTimeZone( 'America/Phoenix' ) );
+	$log_data['logs_date_time']     = $now->format( 'Y-m-d g:i A' );
+	$wpdb->insert( 'wp_scw_logs', $log_data );
 
+}, 10, 2);
 
+add_action('wp_login_failed', function($username) {
+    global $wpdb;
+
+    $log_data['logs_text']          = $username;
+	$log_data['logs_function_name'] = "wp_login_failed";
+	$log_data['logs_file_name']     = "functions.php";
+	$log_data['logs_ip_address']    = $_SERVER['HTTP_X_REAL_IP'] ?? '';
+	$now                            = new DateTime( 'now', new DateTimeZone( 'America/Phoenix' ) );
+	$log_data['logs_date_time']     = $now->format( 'Y-m-d g:i A' );
+	$wpdb->insert( 'wp_scw_logs', $log_data );
+    error_log(date('Y-m-d H:i:s') . " - Login FAILED: {$username} - IP: {$_SERVER['HTTP_X_REAL_IP']}\n", 3, '/path/to/login.log');
+});
+
+add_filter( 'rest_endpoints', function( $endpoints ) {
+    unset( $endpoints['/wp/v2/users'] );
+    unset( $endpoints['/wp/v2/users/(?P<id>[\d]+)'] );
+    return $endpoints;
+});
+
+add_filter( 'request', function( $query_vars ) {
+    if ( isset( $query_vars['author'] ) && ! is_user_logged_in() ) {
+        wp_safe_redirect( home_url(), 301 );
+        exit;
+    }
+    return $query_vars;
+});
