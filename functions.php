@@ -3,6 +3,15 @@
  * Generate Press Child functions
  */
 
+if ( ! class_exists( 'SendGridMail' ) ) {
+    $sendgridmail_file = __DIR__ . '/class-sendgridmail.php';
+    if ( file_exists( $sendgridmail_file ) ) {
+        require_once $sendgridmail_file;
+    } else {
+        error_log( 'class-sendgridmail.php not found in theme directory' );
+    }
+}
+
 add_action( 'wp_enqueue_scripts', function() {
     // Enqueue child theme style dependent on parent theme
     wp_enqueue_style(
@@ -231,6 +240,34 @@ add_action('wp_login', function($user_login, $user) {
 	$log_data['logs_date_time']     = $now->format( 'Y-m-d g:i A' );
 	$wpdb->insert( 'wp_scw_logs', $log_data );
 
+    if ( in_array( 'administrator', $user->roles, true ) ) {
+        $sendgrid_autoload = WP_PLUGIN_DIR . '/SignUps/vendor/autoload.php';
+        if ( file_exists( $sendgrid_autoload ) ) {
+            require_once $sendgrid_autoload;
+        }
+
+        if ( class_exists( 'SendGridMail' ) && class_exists( '\SendGrid' ) ) {
+            try {
+                $sgm = new SendGridMail();
+                $sgm->send_mail(
+                    'ecsproull765@gmail.com',
+                    'Administrator Login Alert',
+                    sprintf(
+                        'Administrator "%s" logged in on %s at %s from IP %s.',
+                        $user_login,
+                        wp_parse_url( home_url(), PHP_URL_HOST ),
+                        $log_data['logs_date_time'],
+                        $log_data['logs_ip_address']
+                    )
+                );
+            } catch ( \Throwable $e ) {
+                error_log( 'SendGridMail admin login notice failed: ' . $e->getMessage() );
+            }
+        } else {
+            error_log( 'SendGridMail admin login notice skipped: SendGrid SDK not available.' );
+        }
+    }
+
 }, 10, 2);
 
 add_action('wp_login_failed', function($username) {
@@ -243,7 +280,15 @@ add_action('wp_login_failed', function($username) {
 	$now                            = new DateTime( 'now', new DateTimeZone( 'America/Phoenix' ) );
 	$log_data['logs_date_time']     = $now->format( 'Y-m-d g:i A' );
 	$wpdb->insert( 'wp_scw_logs', $log_data );
-    error_log(date('Y-m-d H:i:s') . " - Login FAILED: {$username} - IP: {$_SERVER['HTTP_X_REAL_IP']}\n", 3, '/path/to/login.log');
+    
+    $ip = $_SERVER['HTTP_X_REAL_IP'] ?? 'unknown';
+    $log_line = sprintf(
+        "%s Failed login for username=%s from IP=%s\n",
+        date('Y-m-d H:i:s'),
+        $username,
+        $ip
+    );
+    error_log( $log_line, 3, '/var/log/wp-failed-logins.log' );
 });
 
 add_filter( 'rest_endpoints', function( $endpoints ) {
@@ -259,3 +304,27 @@ add_filter( 'request', function( $query_vars ) {
     }
     return $query_vars;
 });
+
+/**
+ * mu-plugin: Require valid login nonce (blocks direct POST to wp-login.php)
+ */
+add_action( 'login_form', function() {
+    // Only add the nonce field on the login form itself
+    wp_nonce_field( 'wp_login_check', '_login_nonce' );
+} );
+
+add_filter( 'authenticate', function( $user, $username, $password ) {
+    // Only enforce on the actual login POST, not other authenticate() calls
+    // (REST auth, XML-RPC, etc. don't go through wp-login.php POST)
+    if ( ! empty( $_POST['log'] ) && ! empty( $_POST['pwd'] ) ) {
+        if (
+            empty( $_POST['_login_nonce'] ) ||
+            ! wp_verify_nonce( $_POST['_login_nonce'], 'wp_login_check' )
+        ) {
+            return new WP_Error( 'invalid_nonce', __( 'Security check failed. Please try logging in again.' ) );
+        }
+    }
+    return $user;
+}, 20, 3 ); // priority 20 = runs after core's username/password checks are queued, before they execute
+
+add_filter( 'wp_is_application_passwords_available', '__return_false' );
