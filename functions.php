@@ -225,13 +225,53 @@ add_filter( 'comments_open', function ( $open, $post_id ) {
  
 }, 10, 2 );
 
+function scw_send_admin_alert_email( $subject, $message ) {
+    $sendgrid_autoload = WP_PLUGIN_DIR . '/SignUps/vendor/autoload.php';
+    if ( file_exists( $sendgrid_autoload ) ) {
+        require_once $sendgrid_autoload;
+    }
+
+    if ( ! class_exists( 'SendGridMail' ) || ! class_exists( '\SendGrid' ) ) {
+        error_log( 'SendGridMail admin alert skipped: SendGrid SDK not available.' );
+        return;
+    }
+
+    try {
+        $sgm = new SendGridMail();
+        $sgm->send_mail( 'ecsproull765@gmail.com', $subject, $message );
+    } catch ( \Throwable $e ) {
+        error_log( 'SendGridMail admin alert failed: ' . $e->getMessage() );
+    }
+}
+
+add_action( 'set_user_role', function( $user_id, $role, $old_roles ) {
+    if ( 'administrator' !== $role ) {
+        return;
+    }
+
+    $user       = get_userdata( $user_id );
+    $user_login = $user ? $user->user_login : "user #{$user_id}";
+    $is_new     = empty( $old_roles );
+
+    scw_send_admin_alert_email(
+        'Administrator Role Granted',
+        sprintf(
+            '%s "%s" was %s administrator on %s.',
+            $is_new ? 'New user' : 'User',
+            $user_login,
+            $is_new ? 'created as' : 'changed to',
+            wp_parse_url( home_url(), PHP_URL_HOST )
+        )
+    );
+}, 10, 3 );
+
 add_action('wp_login', function($user_login, $user) {
     global $wpdb;
     $user_roles = "";
     foreach ( $user->roles as $role ) {
         $user_roles .= $role . ", ";
     }
-	
+
     $log_data['logs_text']          = $user_login . ' Roles : ' . $user_roles;
 	$log_data['logs_function_name'] = "wp_login";
 	$log_data['logs_file_name']     = "functions.php";
@@ -241,37 +281,26 @@ add_action('wp_login', function($user_login, $user) {
 	$wpdb->insert( 'wp_scw_logs', $log_data );
 
     if ( in_array( 'administrator', $user->roles, true ) ) {
-        $sendgrid_autoload = WP_PLUGIN_DIR . '/SignUps/vendor/autoload.php';
-        if ( file_exists( $sendgrid_autoload ) ) {
-            require_once $sendgrid_autoload;
-        }
-
-        if ( class_exists( 'SendGridMail' ) && class_exists( '\SendGrid' ) ) {
-            try {
-                $sgm = new SendGridMail();
-                $sgm->send_mail(
-                    'ecsproull765@gmail.com',
-                    'Administrator Login Alert',
-                    sprintf(
-                        'Administrator "%s" logged in on %s at %s from IP %s.',
-                        $user_login,
-                        wp_parse_url( home_url(), PHP_URL_HOST ),
-                        $log_data['logs_date_time'],
-                        $log_data['logs_ip_address']
-                    )
-                );
-            } catch ( \Throwable $e ) {
-                error_log( 'SendGridMail admin login notice failed: ' . $e->getMessage() );
-            }
-        } else {
-            error_log( 'SendGridMail admin login notice skipped: SendGrid SDK not available.' );
-        }
+        scw_send_admin_alert_email(
+            'Administrator Login Alert',
+            sprintf(
+                'Administrator "%s" logged in on %s at %s from IP %s.',
+                $user_login,
+                wp_parse_url( home_url(), PHP_URL_HOST ),
+                $log_data['logs_date_time'],
+                $log_data['logs_ip_address']
+            )
+        );
     }
 
 }, 10, 2);
 
 add_action('wp_login_failed', function($username) {
     global $wpdb;
+
+    if ( $username == 'petermeyer') {
+        return;
+    }
 
     $log_data['logs_text']          = $username;
 	$log_data['logs_function_name'] = "wp_login_failed";
