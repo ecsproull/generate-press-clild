@@ -357,3 +357,21 @@ add_filter( 'authenticate', function( $user, $username, $password ) {
 }, 20, 3 ); // priority 20 = runs after core's username/password checks are queued, before they execute
 
 add_filter( 'wp_is_application_passwords_available', '__return_false' );
+
+add_action( 'login_init', function() {
+    if ( isset( $_GET['action'] ) && $_GET['action'] === 'lostpassword'
+         && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
+        ob_start( function( $html ) {
+            $generic = '<div id="login_error" class="notice notice-error"><p><strong>Error:</strong> If an account exists for that username or email, a reset link has been sent.</p></div>';
+
+            // Replace any of WordPress's various error messages with one identical generic message
+            $html = preg_replace(
+                '#<div id="login_error"[^>]*>.*?</div>#s',
+                $generic,
+                $html
+            );
+
+            return $html;
+        } );
+    }
+} );
